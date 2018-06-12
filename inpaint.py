@@ -5,6 +5,7 @@ import tqdm
 import os
 import matplotlib.pyplot as plt
 import sys
+import skimage.transform
 # sys.path.append('..')
 from network import Network
 
@@ -31,17 +32,30 @@ class Inpaint:
         saver = tf.train.Saver()
         saver.restore(self.sess, modelLocation)
 
-    def inpaint(self,image,mask):
-        rimg = cv2.resize(image,(self.IMAGE_SIZEy,self.IMAGE_SIZEx))
-        rimg_normed = (rimg/127.5)
-        rmask = cv2.resize(mask, (self.IMAGE_SIZEy, self.IMAGE_SIZEx))
-        rmask = np.reshape(rmask,(128,128,1))
-        completion = self.sess.run(self.model.completion, feed_dict={self.x: np.array([rimg_normed],dtype=np.uint8), self.mask: np.array([rmask],dtype=np.uint8), self.is_training: False})
-        img = completion[0]
-        img = np.array((img +.8) * 127.5, dtype=np.uint8)
-        chmask = np.dstack((rmask,rmask,rmask))
-        goodPx = np.asarray(img*chmask,dtype=np.uint8)
-        outImg = np.asarray(rimg*(1-chmask)+goodPx,dtype=np.uint8)
-        outImg = cv2.resize(outImg,image.shape[:2])
+    def inpaint(self, image, mask):
+        originalSize = image.shape
+        rimg = skimage.transform.resize(image, (self.IMAGE_SIZEy, self.IMAGE_SIZEx), preserve_range=True, mode='constant')
+        # rimg = cv2.resize(image, (self.IMAGE_SIZEy, self.IMAGE_SIZEx))
+        rimg = rimg / 127.5 - 1
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        return outImg
+        # rimg_normed = rimg
+        # rmask = cv2.resize(mask, (self.IMAGE_SIZEy, self.IMAGE_SIZEx))
+        # rmask = np.reshape(rmask, (128, 128, 1))
+        rmask = skimage.transform.resize(mask, (self.IMAGE_SIZEy, self.IMAGE_SIZEx), preserve_range=True, mode='constant')
+        rmask = np.reshape(rmask, (self.IMAGE_SIZEy, self.IMAGE_SIZEx, 1))
+        rmask[rmask < .9] = 0
+        rmask[rmask >= .9] = 1
+        completion = self.sess.run(self.model.completion, feed_dict={self.x: np.array([rimg]),
+                                                                     self.mask: np.array([rmask], dtype=np.uint8),
+                                                                     self.is_training: False})
+
+        img = completion[0]
+        raw = np.array((rimg + 1) * 127.5,dtype=np.uint8) #raw
+        # chmask = np.dstack((rmask, rmask, rmask))
+        # goodPx = np.asarray(img * chmask, dtype=np.uint8)
+        # outImg = np.asarray(rimg * (1 - chmask) + goodPx, dtype=np.uint8)
+        # outImg = cv2.resize(outImg, image.shape[:2]) #img
+        outputImage = np.array((img + 1) * 127.5, dtype=np.uint8)
+        # masked = raw * (1 - mask) + np.ones_like(raw) * mask * 255
+        return outputImage

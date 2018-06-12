@@ -8,13 +8,80 @@ from time import sleep
 import time
 import ctypes
 import multiprocessing
+from multiprocessing import Pool
+from queue import Queue
+from sklearn import feature_extraction
+import matplotlib.pyplot as plt
 deepInpaint = True
 from pypoi import poissonblending
+from threading import Thread
 try:
     import inpaint
 except:
     print("Could Not Load deep inpainting module, will default to opencv...")
     deepInpaint = False
+verbose=False
+def detectLandmarks(img_bgr,detector,predictor,detscale = .3):
+    if img_bgr is not None:
+        img_bgr = cv2.resize(img_bgr, (int(img_bgr.shape[1] * .5), int(img_bgr.shape[0] * .5)))
+        img_bgr_det = cv2.resize(img_bgr, (int(img_bgr.shape[1] * detscale), int(img_bgr.shape[0] * detscale)))
+        img_det = cv2.cvtColor(img_bgr_det, cv2.COLOR_BGR2RGB)
+        img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        dets = detector(img_det, 1)
+        for k, ds in enumerate(dets):
+            d = dlib.rectangle(int(float(ds.left()) / detscale), int(float(ds.top()) / detscale),
+                               int(float(ds.right()) / detscale), int(float(ds.bottom()) / detscale))
+            shape = predictor(img, d)
+            landmarks = []
+            for i in range(shape.num_parts):
+                img_bgr = cv2.circle(img_bgr, (shape.part(i).x, shape.part(i).y), 2, (0, 0, 255), -1)
+                landmarks.append([shape.part(i).x, shape.part(i).y])
+            landmarks = np.asarray(landmarks, dtype='float32')
+            chull = cv2.convexHull(landmarks)
+            chullminx = chull[:, :, 0].min()
+            chullminy = chull[:, :, 1].min()
+            chullmaxx = chull[:, :, 0].max()
+            chullmaxy = chull[:, :, 1].max()
+
+            top = int(min(chullminy, d.top())) - 1
+            bottom = int(max(chullmaxy, d.bottom())) + 1
+            left = int(min(chullminx, d.left())) - 1
+            right = int(max(chullmaxx, d.right())) + 1
+            return ((left,top,right,bottom),landmarks,img)
+    return (None,None,None)
+
+def runImageDir(imgDir,outputDir):
+    if not os.path.exists(outputDir):
+        os.makedirs(outputDir)
+    predictor_path = './data/shape_predictor_68_face_landmarks.dat'
+
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(predictor_path)
+    frontalizer = Frontalizer(scale=1)
+    for file in os.listdir(imgDir):
+        if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
+            print(file)
+            img_bgr = cv2.imread(os.path.join(imgDir,file))
+            frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
+            cv2.imwrite(os.path.join(outputDir,'inpaint_'+file),inpainted)
+            cv2.imwrite(os.path.join(outputDir, 'raw_' + file), frontal_raw)
+
+
+def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
+    faceRect, landmarks, img = detectLandmarks(img_bgr, detector, predictor)
+    if faceRect is not None:
+        # poseFrame = frontalizer.genPoseOutputImage(img, landmarks)
+        img_bgr = cv2.rectangle(img_bgr, (faceRect[0], faceRect[1]), (faceRect[2], faceRect[3]), (255, 0, 0), 5)
+        dispImg = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)
+        cv2.imshow('frame1', dispImg)
+        # cv2.imshow('pose',poseFrame)
+        fdata = frontalizer.frontalizeImage(img, landmarks)
+        frontalFace = fdata[0]
+        dgenMap = fdata[1]
+        ff_bgr = cv2.cvtColor(frontalFace, cv2.COLOR_BGR2RGB)
+        inpainted_bgr = cv2.cvtColor(dgenMap, cv2.COLOR_BGR2RGB)
+        return(ff_bgr,inpainted_bgr)
+    return (None,None)
 def testFrontalize():
     img_bgr = cv2.imread('./data/testfaces/face5.jpg')
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -40,66 +107,16 @@ def testFrontalize():
     # plt.ion()
     detscale = .3
     while (cap.isOpened()):
-
+        t0 = time.time()
         ret, img_bgr = cap.read()
-        img_bgr = cv2.resize(img_bgr, (int(img_bgr.shape[1] * .5), int(img_bgr.shape[0] * .5)))
-        img_bgr_det = cv2.resize(img_bgr, (int(img_bgr.shape[1] * detscale), int(img_bgr.shape[0] * detscale)))
-
-        # cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
-        # cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-
-        if True:
-            # cv2.imshow("Image", frame)
-            img_det = cv2.cvtColor(img_bgr_det, cv2.COLOR_BGR2RGB)
-            img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-            dets = detector(img_det, 1)
-            # print("Number of faces detected: {}".format(len(dets)))
-            for k, ds in enumerate(dets):
-                # print("Detection {}: Left: {} Top: {} Right: {} Bottom: {}".format(
-                #     k, ds.left(), ds.top(), ds.right(), ds.bottom()))
-                # Get the landmarks/parts for the face in box d.
-                d = dlib.rectangle(int(float(ds.left())/detscale),int(float(ds.top())/detscale),int(float(ds.right())/detscale),int(float(ds.bottom())/detscale))
-                shape = predictor(img, d)
-                # print("Part 0: {}, Part 1: {} ...".format(shape.part(0),
-                #                                           shape.part(1)))
-                # win.add_overlay(shape)
-
-
-                landmarks = []
-                for i in range(shape.num_parts):
-                    img_bgr = cv2.circle(img_bgr,(shape.part(i).x, shape.part(i).y),2,(0,0,255),-1)
-                    landmarks.append([shape.part(i).x, shape.part(i).y])
-                landmarks = np.asarray(landmarks, dtype='float32')
-                chull = cv2.convexHull(landmarks)
-                chullminx = chull[:, :, 0].min()
-                chullminy = chull[:, :, 1].min()
-                chullmaxx = chull[:, :, 0].max()
-                chullmaxy = chull[:, :, 1].max()
-
-                top = int(min(chullminy, d.top())) - 1
-                bottom = int(max(chullmaxy, d.bottom())) + 1
-                left = int(min(chullminx, d.left())) - 1
-                right = int(max(chullmaxx, d.right())) + 1
-                img_bgr = cv2.rectangle(img_bgr, (left, top), (right, bottom), (255, 0, 0), 5)
-                cv2.imshow('frame1', img_bgr)
-
-                fdata = frontalizer.frontalizeImage(img, landmarks)
-                frontalFace = fdata[0]
-                dgenMap = fdata[1]
-                ff_bgr = cv2.cvtColor(frontalFace,cv2.COLOR_BGR2RGB)
-                inpainted_bgr = cv2.cvtColor(dgenMap,cv2.COLOR_BGR2RGB)
-                cv2.imshow('frame2',ff_bgr)
-                cv2.imshow('frame3',inpainted_bgr)
-                # cv2.waitKey()
-                # plt.imshow(frontalFace)
-                # plt.waitforbuttonpress()
-        else:
-            print('no video')
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
+        frontal_raw,inpainted = runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer)
+        if frontal_raw is not None:
+            cv2.imshow('raw',frontal_raw)
+            cv2.imshow('inpainted',inpainted)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
+        t1 = time.time()
+        print('framerate: ', 1/(t1-t0), 'FPS')
     cap.release()
     cv2.destroyAllWindows()
 
@@ -222,6 +239,49 @@ def PointInTriangle(pt,v1, v2, v3):
 
   return ((b1 == b2) and (b2 == b3)) and \
          PointInAABB(pt, map(max, v1, v2, v3), map(min, v1, v2, v3))
+
+
+def countUnique(patch, x, y):
+    return (x,y,len(np.unique(patch)))
+
+class uniqueCounter:
+    def __init__(self,windowSize,step,numCores = 5):
+        self.degenerateMap = []
+        self.replace_mask = []
+        self.windowSize = windowSize
+        self.step = step
+        self.numcores = numCores
+        # self.pool = Pool(numCores)
+    def apply_result(self,result):
+        x = result[0]
+        y = result[1]
+        v = result[2]
+        self.degenerateMap[y:y+self.step,x:x+self.step] = v
+    def buildDegenerateMap(self,mappedPixelLocs,final_mapped_img):
+        # self.pool = Pool(self.numcores)
+        originalStep = self.step
+        self.degenerateMap = np.zeros(mappedPixelLocs.shape,dtype=np.int32)
+        self.replace_mask = np.zeros_like(self.degenerateMap)
+        # while self.step >= 2:
+        for x in range(0,mappedPixelLocs.shape[1]-math.ceil(self.windowSize),self.step):
+            for y in range(0,mappedPixelLocs.shape[0]-math.ceil(self.windowSize),self.step):
+                centerx = x+int(self.windowSize/2)
+                centery = y+int(self.windowSize/2)
+                if np.sum(final_mapped_img[centery,centerx]) > 0 and self.replace_mask[centery,centerx] == 0:
+                    window = mappedPixelLocs[y:y+self.windowSize,x:x+self.windowSize]
+                    self.degenerateMap[centery:centery + self.step, centerx:centerx + self.step] = len(np.unique(window))
+        self.degenerateMap = np.uint8((self.degenerateMap / self.degenerateMap.max()) * 255)
+        ret, self.replace_mask = cv2.threshold(self.degenerateMap, 135, 255, cv2.THRESH_BINARY_INV)
+        self.step = int(self.step/2)
+            # cv2.imshow('deg',self.replace_mask)
+            # cv2.imshow('rep', self.degenerateMap)
+            # cv2.waitKey()
+        self.step = originalStep
+        # self.pool.apply_async(countUnique,(window,centerx,centery),callback=self.apply_result)
+        # self.pool.close()
+        # self.pool.join()
+        return self.degenerateMap
+
 class Frontalizer:
     model3d = Model3d()
     normX3d = []
@@ -240,6 +300,7 @@ class Frontalizer:
     modelLandmarks = []
     imgModel = []
     modelOuterMask = []
+    degenerateBuilder = uniqueCounter(15,10,1)
     def __init__(self,scale=1,model3D=None,modelFile='./data/imgModel.csv',):
         self.img = []; self.normX3d = []; self.ptsxv = []; self.pts = []; self.ptsx = []; self.x3d = []
         self.homo_x3d = []; self.Z = []; self.Z_ext = []; self.x3d_zm=[]; self.scale = []; self.U = []; self.homo_x3d=[]; self.normX3d=[];
@@ -255,6 +316,19 @@ class Frontalizer:
         self.pixelLocs = []
         self.modelOuterMask = None
         self.inPainter = inpaint.Inpaint('./data/latest')
+    def estimatePoseParameters(self,landmarks,a,c,t):
+        eye1Points = landmarks[9:13]
+        eye2Points = landmarks[20:25]
+        mouthPoints = landmarks[31:50]
+        e1 = eye1Points.mean(axis=1)
+        e2 = eye2Points.mean(axis=1)
+        m = mouthPoints.mean(axis=1)
+        cx = (e1[0]+e2[0]+m[0])/3
+        cy = (e1[1]+e2[1]+m[1])/3
+        P = np.asarray([[e1[0]-c[0],e1[1]-c[1]],[e2[0]-c[0],e2[1]-c[1]],[m[0]-c[0],m[1]-c[1]]])
+        Sigma = 1/3*np.dot(P.transpose(),P)
+        r=Sigma[0,0]+Sigma[1,1]+math.sqrt(math.pow(Sigma[0,0]-Sigma[1,1],2)+4*Sigma[0,1])
+        pitch = math.asin()
 
     def frontalizeImage(self,faceImg,landmarks):
         bestImage = None
@@ -303,7 +377,8 @@ class Frontalizer:
                 X_3Ds = X_3D
                 x_2Ds = x_2D
                 t1 = time.time()
-                print("Setup coordinates time: ", t1-t0)
+                if verbose:
+                    print("Setup coordinates time: ", t1-t0)
                 t0 = time.time()
                 retval, Ptv = cv2.solve(np.dot(X_3Ds.transpose(),X_3Ds),np.dot(X_3Ds.transpose(),np.float32(x_2Ds)),flags=cv2.DECOMP_NORMAL) #This is our final camera
                 Pt = Ptv.transpose().reshape((2,-1))
@@ -326,17 +401,20 @@ class Frontalizer:
                     homogen3dal1[i, 2] = self.Z_ext[i]
                     homogen3dal1[i, 3] = 1
                 t1 = time.time()
-                print("Camera Computation time: ", t1 - t0)
+                if verbose:
+                    print("Camera Computation time: ", t1 - t0)
                 #compute triangluation and frontalize
                 t0 = time.time()
                 tri = self.generate_3Dtriangulation_mapping_data(self.ptsxv,self.img)
                 t1 = time.time()
-                print("Triangulation time: ", t1 - t0)
+                if verbose:
+                    print("Triangulation time: ", t1 - t0)
                 #TODO is X and img the same thing?
                 t0 = time.time()
                 mapData = self.do_3Dtexture_mapping_with_delaunay(landmarks,faceImg,self.img,tri,P)
                 t1 = time.time()
-                print("Mapping time: ", t1 - t0)
+                if verbose:
+                    print("Mapping time: ", t1 - t0)
                 mapped_img = mapData[0]
                 dgenmap = mapData[1]
                 t0 = time.time()
@@ -355,11 +433,13 @@ class Frontalizer:
                 images = [frontal_sym1,frontal_sym2,frontal_sym3,frontal_sym4,frontal_sym5]
                 bestsymIndex = self.bestSymIndex((frontal_sym1,frontal_sym2,frontal_sym3,frontal_sym4,frontal_sym5))
                 t1 = time.time()
-                print("Face flip time: ", t1 - t0)
+                if verbose:
+                    print("Face flip time: ", t1 - t0)
                 t0 = time.time()
                 bestImage = images[bestsymIndex]
                 t1 = time.time()
-                print("Best image time: ", t1 - t0)
+                if verbose:
+                    print("Best image time: ", t1 - t0)
                 if side == 0 or True:
                     bestImage = frontal_raw
         return bestImage,dgenmap
@@ -739,11 +819,12 @@ class Frontalizer:
         #do the mapping
         points1 = probe_mesh_pts
         cont = 1
-        # vis2 = np.copy(probe_image)
-        # vis1 = np.copy(img)
-        # minv = np.min(vis1)
-        # maxv = np.max(vis1)
-        # vis1 /= (maxv*255)
+        vis2 = np.copy(probe_image)
+        vis1 = np.copy(img)
+        minv = np.min(vis1)
+        maxv = np.max(vis1)
+        vis1 /= maxv
+        vis3 = np.copy(mapped_img)
         pixelLocs = np.arange(probe_image.shape[0]*probe_image.shape[1]).reshape(probe_image.shape[:2])
         mappedPixelLocs = np.zeros(tri.size,dtype=np.int32)
         degenerateMap = np.zeros(tri.size,dtype=np.int32)
@@ -752,22 +833,35 @@ class Frontalizer:
             Z = np.int32(np.dot(P,(tri.triangles[i].coor.transpose())))
             probe_x = Z[0]
             probe_y = Z[1]
+            mappedPixelLocs[coordinates[:, 1], coordinates[:, 0]] = pixelLocs[probe_y, probe_x]
+            mapped_img[coordinates[:, 1], coordinates[:, 0]] = probe_image[probe_y, probe_x]
+
             # fig = plt.figure()
             # plt.ion()
             # for j in np.arange(0,coordinates.shape[0],6):
-            #     vis1 = cv2.circle(vis1,tuple(coordinates[j]),2,(0,0,0),-1)
-            #     vis2 = cv2.circle(vis2,(int(probe_x[j]),int(probe_y[j])),3,(255,0,0),-1)
+            #     vis1 = cv2.circle(vis1,tuple(coordinates[j]),1,(1,1,1),-1)
+            #     vis2 = cv2.circle(vis2,(int(probe_x[j]),int(probe_y[j])),1,(255,0,0),-1)
+            #     radius =6
+            #     # vis3[coordinates[j][1],coordinates[j][0]] = mapped_i[coordinates[j][1],coordinates[j][0]]
+            #     for x in range(radius):
+            #         for y in range(radius):
+            #             if x >= 0 and y >=0 and x < vis3.shape[1] and y < vis3.shape[0]:
+            #                 vis3[int((coordinates[j][1]-radius/2)+y),int((coordinates[j][0]-radius/2)+x)] = mapped_img[int((coordinates[j][1]-radius/2)+y),int((coordinates[j][0]-radius/2)+x)]
             #     plt.close()
-            #     f, axarr = plt.subplots(1, 2)
+            #     f, axarr = plt.subplots(1, 3)
             #     axarr[0].imshow(vis1)
             #     axarr[1].imshow(vis2)
+            #     axarr[2 ].imshow(vis3)
             #     plt.draw()
-            #     plt.waitforbuttonpress()
+            #     if j == 0 and i == 0:
+            #         plt.waitforbuttonpress()
+            #     else:
+            #         plt.waitforbuttonpress(timeout=.1)
+            #     # plt.waitforbuttonpress()
             # uniqueMappedCoords = np.array(list(set(tuple(p) for p in coordinates)))
             # uniqueProbePoints = np.array(list(set(tuple(p) for p in Z[0:2,:].transpose())))
 
-            mappedPixelLocs[coordinates[:,1],coordinates[:,0]] = pixelLocs[probe_y,probe_x]
-            mapped_img[coordinates[:,1],coordinates[:,0]] = probe_image[probe_y,probe_x]
+
 
         final_mapped_img = mapped_img
         # shared_pixelLocs = mp.Array(ctypes.c_int32, mappedPixelLocs)
@@ -775,79 +869,122 @@ class Frontalizer:
 
 
         windowSize = 15
-        step = 3
-        for x in range(0,mappedPixelLocs.shape[1]-math.ceil(windowSize),step):
-            for y in range(0,mappedPixelLocs.shape[0]-math.ceil(windowSize),step):
-                centerx = x+int(windowSize/2)
-                centery = y+int(windowSize/2)
-                if np.sum(final_mapped_img[centery,centerx]) > 0:
-                    window = mappedPixelLocs[y:y+windowSize,x:x+windowSize]
-                    nUnique = len(np.unique(window))
-                    degenerateMap[centery:centery+step,centerx:centerx+step] = nUnique
+        step = 6
+        degenerateMap = self.degenerateBuilder.buildDegenerateMap(mappedPixelLocs,final_mapped_img)
+        # locationPatches = feature_extraction.image.extract_patches_2d(mappedPixelLocs, (windowSize,windowSize))
+
+
+        # pool = Pool()
+        # output = pool.map(countUnique, (patch for patch in locationPatches))
+        # pad = pad = int((windowSize-1)/2)
+        # pool.appl
+        # patchOutput = np.asarray(output,dtype=np.int32).reshape((degenerateMap.shape[0]-(windowSize-1),degenerateMap.shape[1]-(windowSize-1)))
+        # degenerateMap[pad:patchOutput.shape[0] + pad, pad:patchOutput.shape[1] + pad] = patchOutput
+        # for x in range(0,mappedPixelLocs.shape[1]-math.ceil(windowSize),step):
+        #     for y in range(0,mappedPixelLocs.shape[0]-math.ceil(windowSize),step):
+        #         centerx = x+int(windowSize/2)
+        #         centery = y+int(windowSize/2)
+        #         if np.sum(final_mapped_img[centery,centerx]) > 0:
+        #             window = mappedPixelLocs[y:y+windowSize,x:x+windowSize]
+        #             nUnique = len(np.unique(window))
+        #             degenerateMap[centery:centery+step,centerx:centerx+step] = nUnique
         degenerateMap = np.uint8((degenerateMap/degenerateMap.max())*255)
         mask3D = np.uint8(cv2.resize(self.mask3D,(degenerateMap.shape[1],degenerateMap.shape[0]))+1)
         kernel = np.ones((20, 20), np.uint8)
         mask3D = cv2.erode(mask3D, kernel, iterations=1)
-        ret,replace_mask = cv2.threshold(degenerateMap,135,255,cv2.THRESH_BINARY_INV)
+        ret,replace_mask = cv2.threshold(degenerateMap,100,255,cv2.THRESH_BINARY_INV)
         replace_mask *= mask3D
         # inpainted = self.inPainter.inpaint(final_mapped_img,replace_mask/255)
         # inpainted = cv2.inpaint(final_mapped_img, replace_mask, 3, cv2.INPAINT_NS)
         r = np.uint8(replace_mask/255)
         r = np.dstack((r,r,r))
         srcImg = np.fliplr(final_mapped_img)
-        inpainted = poissonblending.blend(final_mapped_img,srcImg,r[:,:,0])
-        # inpainted = mirrorInpaint(final_mapped_img, r)
+        #inpainted = poissonblending.blend(final_mapped_img,srcImg,r[:,:,0])
+        inpainted = mirrorInpaint(final_mapped_img, r)
         face_masked = final_mapped_img*(1-r)
         return (face_masked,inpainted)
-class uniqueCounter():
-    def __init__(self,m,outM,i):
-        self.outM = outM
-        self.m = m
-        self.i = i
-    def run(self):
-        nUnique = len(np.unique(self.m))
-        self.outM[self.i] = nUnique
-class RunInParallelWithReturn(object):
-    def __init__(self, tasks, n_proc=2):
 
-        # -- private attributes
-        self.__pool = Pool(initializer=start_process, processes=n_proc)
-        self.__tasks = []
+    def face_orientation(self,frame, landmarks):
+        size = frame.shape  # (height, width, color_channel)
 
-        # -- public attributes
-        self.tasks = tasks
+        image_points = np.array([
+            (landmarks[0][0], landmarks[0][1]),  # Nose tip
+            (landmarks[51][0], landmarks[51][1]),  # Chin
+            (landmarks[11][0], landmarks[11][1]),  # Left eye left corner
+            (landmarks[22][0], landmarks[22][1]),  # Right eye right corne
+            (landmarks[34][0], landmarks[34][1]),  # Left Mouth corner
+            (landmarks[40][0], landmarks[40][1])  # Right mouth corner
+        ], dtype=np.float32)
 
-    @property
-    def tasks(self):
-        return self.__tasks
+        model_points = np.array([
+            (0.0, 0.0, 0.0),  # Nose tip
+            (0.0, -330.0, -65.0),  # Chin
+            (-165.0, 170.0, -135.0),  # Left eye left corner
+            (165.0, 170.0, -135.0),  # Right eye right corne
+            (-150.0, -150.0, -125.0),  # Left Mouth corner
+            (150.0, -150.0, -125.0)  # Right mouth corner
+        ],dtype=np.float32)
 
-    @tasks.setter
-    def tasks(self, tasks_list):
-        self.__tasks = []
-        for t in range(len(tasks_list)):
-            self.__tasks.append((t, len(tasks_list), tasks_list[t]))
+        # Camera internals
 
-    def run(self):
-        global counter
-        counter.value = 0
+        center = (size[1] / 2, size[0] / 2)
+        focal_length = center[0] / np.tan(60 / 2 * np.pi / 180)
+        camera_matrix = np.array(
+            [[focal_length, 0, center[0]],
+             [0, focal_length, center[1]],
+             [0, 0, 1]], dtype=np.float32
+        )
 
-        # pool_outs = self.__pool.map(launch_tasks, self.tasks)
-        pool_outs = self.__pool.imap(launch_tasks, self.tasks)
-        self.__pool.close()
-        self.__pool.join()
+        dist_coeffs = np.zeros((4, 1),dtype=np.float32)  # Assuming no lens distortion
+        (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix,
+                                                                      dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
 
-        try:
-            # results = [out for out in pool_outs.get() if out]
-            results = [out for out in pool_outs if out]
-            assert (len(results)) == len(self.tasks)
+        axis = np.float32([[500, 0, 0],
+                           [0, 500, 0],
+                           [0, 0, 500]])
 
-            print('\n{0}-- finish.{1:30}'.format(CONST.OK_GREEN, CONST.END))
-            sys.stdout.flush()
+        imgpts, jac = cv2.projectPoints(axis, rotation_vector, translation_vector, camera_matrix, dist_coeffs)
+        modelpts, jac2 = cv2.projectPoints(model_points, rotation_vector, translation_vector, camera_matrix,
+                                           dist_coeffs)
+        rvec_matrix = cv2.Rodrigues(rotation_vector)[0]
 
-            return results
+        proj_matrix = np.hstack((rvec_matrix, translation_vector))
+        eulerAngles = cv2.decomposeProjectionMatrix(proj_matrix)[6]
 
-        except AssertionError:
-            print('\n{0}ERROR: some objects could not be processed!{1:30}\n'.format(CONST.ERROR, CONST.END))
-            sys.exit(1)
+        pitch, yaw, roll = [math.radians(_) for _ in eulerAngles]
+
+        pitch = math.degrees(math.asin(math.sin(pitch)))
+        roll = -math.degrees(math.asin(math.sin(roll)))
+        yaw = math.degrees(math.asin(math.sin(yaw)))
+
+        return imgpts, modelpts, (str(int(roll)), str(int(pitch)), str(int(yaw))), (landmarks[0][0], landmarks[0][1])
+
+    def genPoseOutputImage(self,frame, landmarks):
+
+        imgpts, modelpts, rotate_degree, nose = self.face_orientation(frame, landmarks)
+
+        cv2.line(frame, nose, tuple(imgpts[1].ravel()), (0, 255, 0), 3)  # GREEN
+        cv2.line(frame, nose, tuple(imgpts[0].ravel()), (255, 0,), 3)  # BLUE
+        cv2.line(frame, nose, tuple(imgpts[2].ravel()), (0, 0, 255), 3)  # RED
+
+        # remapping = [2, 3, 0, 4, 5, 1]
+        # for index in range(int(len(landmarks) / 2)):
+        #     random_color = tuple(np.random.random_integers(0, 255, size=3))
+        #
+        #     cv2.circle(frame, (landmarks[index * 2], landmarks[index * 2 + 1]), 5, random_color, -1)
+        #     cv2.circle(frame, tuple(modelpts[remapping[index]].ravel().astype(int)), 2, random_color, -1)
+        #
+        #
+        #     #    cv2.putText(frame, rotate_degree[0]+' '+rotate_degree[1]+' '+rotate_degree[2], (10, 30),
+        #     #                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
+        #     #                thickness=2, lineType=2)
+
+        for j in range(len(rotate_degree)):
+            cv2.putText(frame, ('{:05.2f}').format(float(rotate_degree[j])), (10, 30 + (50 * j)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), thickness=2, lineType=2)
+
+        return frame
+
 
 testFrontalize()
+#runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output')
