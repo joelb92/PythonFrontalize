@@ -4,17 +4,9 @@ import numpy as np
 import cv2
 import math
 import dlib
-from time import sleep
 import time
-import ctypes
-import multiprocessing
-from multiprocessing import Pool
-from queue import Queue
-from sklearn import feature_extraction
-import matplotlib.pyplot as plt
 deepInpaint = True
 from pypoi import poissonblending
-from threading import Thread
 try:
     import inpaint
 except:
@@ -50,7 +42,16 @@ def detectLandmarks(img_bgr,detector,predictor,detscale = .3):
             return ((left,top,right,bottom),landmarks,img)
     return (None,None,None)
 
-def runImageDir(imgDir,outputDir):
+def parRunImage(file,detector,predictor,frontalizer,outputDir):
+    try:
+        img_bgr = cv2.imread(file)
+        frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
+        # cv2.imwrite(os.path.join(outputDir, 'inpaint_' + file), inpainted)
+        cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
+    except:
+        pass
+
+def runImageDir(imgDir,outputDir,numcores=1):
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
     predictor_path = './data/shape_predictor_68_face_landmarks.dat'
@@ -58,13 +59,22 @@ def runImageDir(imgDir,outputDir):
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(predictor_path)
     frontalizer = Frontalizer(scale=1)
-    for file in os.listdir(imgDir):
-        if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
-            print(file)
+    files = []
+    for root, dirs, files in os.walk(imgDir):
+        for name in files:
+            file = os.path.join(root,name)
+            if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
+                files.append(file)
             img_bgr = cv2.imread(os.path.join(imgDir,file))
-            frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
-            cv2.imwrite(os.path.join(outputDir,'inpaint_'+file),inpainted)
-            cv2.imwrite(os.path.join(outputDir, 'raw_' + file), frontal_raw)
+
+    from joblib import Parallel,delayed
+    Parallel(n_jobs=numcores)(delayed(parRunImage())(file,detector,predictor,frontalizer,outputDir) for file in files)
+    try:
+        frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
+        cv2.imwrite(os.path.join(outputDir,'inpaint_'+file),inpainted)
+        cv2.imwrite(os.path.join(outputDir, 'raw_' + file), frontal_raw)
+    except:
+        pass
 
 
 def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
