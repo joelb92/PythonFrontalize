@@ -48,6 +48,7 @@ def parRunImages(files,detector,predictor,frontalizer,outputDir):
             img_bgr = cv2.imread(file)
             frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
             # cv2.imwrite(os.path.join(outputDir, 'inpaint_' + file), inpainted)
+            print('writing ', outputDir,os.path.basename(file))
             cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
         except:
             pass
