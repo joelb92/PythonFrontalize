@@ -910,7 +910,8 @@ class Frontalizer:
         r = np.dstack((r,r,r))
         srcImg = np.fliplr(final_mapped_img)
         #inpainted = poissonblending.blend(final_mapped_img,srcImg,r[:,:,0])
-        inpainted = mirrorInpaint(final_mapped_img, r)
+        #inpainted = mirrorInpaint(final_mapped_img, r)
+        inpainted = []
         face_masked = final_mapped_img*(1-r)
         return (face_masked,inpainted)
 
