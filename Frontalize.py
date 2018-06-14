@@ -60,21 +60,22 @@ def runImageDir(imgDir,outputDir,numcores=1):
     predictor = dlib.shape_predictor(predictor_path)
     frontalizer = Frontalizer(scale=1)
     files = []
-    for root, dirs, files in os.walk(imgDir):
-        for name in files:
-            file = os.path.join(root,name)
-            if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
+    count = 0
+    for dir in os.listdir(imgDir):
+        dirPath = os.path.join(imgDir,dir)
+        if os.path.isdir(dirPath):
+            for f in os.listdir(dirPath):
+                file = os.path.join(dirPath,f)
                 files.append(file)
-            img_bgr = cv2.imread(os.path.join(imgDir,file))
+                count += 1
+                print(count)
+        # for name in files:
+        #     file = os.path.join(root,name)
+        #     if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
+        #         files.append(file)
 
     from joblib import Parallel,delayed
-    Parallel(n_jobs=numcores)(delayed(parRunImage())(file,detector,predictor,frontalizer,outputDir) for file in files)
-    try:
-        frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
-        cv2.imwrite(os.path.join(outputDir,'inpaint_'+file),inpainted)
-        cv2.imwrite(os.path.join(outputDir, 'raw_' + file), frontal_raw)
-    except:
-        pass
+    Parallel(n_jobs=numcores)(delayed(parRunImage)(file,detector,predictor,frontalizer,outputDir) for file in files)
 
 
 def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
@@ -1000,9 +1001,9 @@ class Frontalizer:
         return frame
 
 if __name__ == "__main__":
-    # imgdir = sys.argv[1]
-    # outputDir = sys.argv[2]
-    # numcores = int(sys.argv[3])
-    # runImageDir(imgdir,outputDir,numcores)
-    testFrontalize()
+    imgdir = sys.argv[1]
+    outputDir = sys.argv[2]
+    numcores = int(sys.argv[3])
+    runImageDir(imgdir,outputDir,numcores)
+    #testFrontalize()
 #runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output')
