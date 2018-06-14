@@ -995,6 +995,10 @@ class Frontalizer:
 
         return frame
 
-
-testFrontalize()
+if __name__ == "__main__":
+    imgdir = sys.argv[1]
+    outputDir = sys.argv[2]
+    numcores = int(sys.argv[3])
+    runImageDir(imgdir,outputDir,numcores)
+#testFrontalize()
 #runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output')
