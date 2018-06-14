@@ -42,20 +42,22 @@ def detectLandmarks(img_bgr,detector,predictor,detscale = .3):
             return ((left,top,right,bottom),landmarks,img)
     return (None,None,None)
 
-def parRunImage(file,detector,predictor,frontalizer,outputDir):
-    try:
-        img_bgr = cv2.imread(file)
-        frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
-        # cv2.imwrite(os.path.join(outputDir, 'inpaint_' + file), inpainted)
-        cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
-    except:
-        pass
+def parRunImages(files,detector,predictor,frontalizer,outputDir):
+    for file in files:
+        try:
+            img_bgr = cv2.imread(file)
+            frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
+            # cv2.imwrite(os.path.join(outputDir, 'inpaint_' + file), inpainted)
+            cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
+        except:
+            pass
 
 def runImageDir(imgDir,outputDir,numcores=1):
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
     predictor_path = './data/shape_predictor_68_face_landmarks.dat'
-
+    batchSize = 100
+    batches = []
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(predictor_path)
     frontalizer = Frontalizer(scale=1)
@@ -73,9 +75,13 @@ def runImageDir(imgDir,outputDir,numcores=1):
         #     file = os.path.join(root,name)
         #     if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
         #         files.append(file)
-
+    count = 0
+    while count <= len(files):
+        batches.append(files[count:count+batchSize])
+        count += batchSize
+        count = min(count,len(files))
     from joblib import Parallel,delayed
-    Parallel(n_jobs=numcores)(delayed(parRunImage)(file,detector,predictor,frontalizer,outputDir) for file in files)
+    Parallel(n_jobs=numcores)(delayed(parRunImages)(files,detector,predictor,frontalizer,outputDir) for files in batches)
 
 
 def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
