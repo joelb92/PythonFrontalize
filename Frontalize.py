@@ -77,10 +77,11 @@ def runImageDir(imgDir,outputDir,numcores=1):
         #     if not os.path.isdir(os.path.join(imgDir,file)) and not file.startswith('.'):
         #         files.append(file)
     count = 0
-    while count <= len(files):
-        batches.append(files[count:count+batchSize])
+    totalFiles = len(files)
+    while count <= totalFiles:
+        batches.append(files[count:min(totalFiles,count+batchSize)])
         count += batchSize
-        count = min(count,len(files))
+
     from joblib import Parallel,delayed
     Parallel(n_jobs=numcores)(delayed(parRunImages)(files,detector,predictor,frontalizer,outputDir) for files in batches)
 
