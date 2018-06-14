@@ -329,7 +329,8 @@ class Frontalizer:
         self.generateDefaultLandmarkTemplate(scale=scale)
         self.pixelLocs = []
         self.modelOuterMask = None
-        self.inPainter = inpaint.Inpaint('./data/latest')
+        if deepInpaint:
+            self.inPainter = inpaint.Inpaint('./data/latest')
     def estimatePoseParameters(self,landmarks,a,c,t):
         eye1Points = landmarks[9:13]
         eye2Points = landmarks[20:25]
