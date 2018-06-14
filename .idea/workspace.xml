@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b3518b7b-7cee-473b-bbfd-0f4b4cc6e97e" name="Default" comment="" />
+    <list default="true" id="b3518b7b-7cee-473b-bbfd-0f4b4cc6e97e" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Frontalize.py" afterPath="$PROJECT_DIR$/Frontalize.py" />
+    </list>
     <ignored path="python_frontalizer_2.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -23,8 +25,8 @@
       <file leaf-file-name="Frontalize.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Frontalize.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="257">
-              <caret line="914" column="22" selection-start-line="914" selection-start-column="22" selection-end-line="914" selection-end-column="22" />
+            <state relative-caret-position="122">
+              <caret line="126" column="36" selection-start-line="126" selection-start-column="36" selection-end-line="126" selection-end-column="36" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -443,7 +445,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>976</line>
+          <line>979</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -463,22 +465,22 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>892</line>
+          <line>895</line>
           <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>888</line>
+          <line>891</line>
           <option name="timeStamp" value="24" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>292</line>
+          <line>295</line>
           <option name="timeStamp" value="29" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>839</line>
+          <line>842</line>
           <option name="timeStamp" value="39" />
         </line-breakpoint>
       </breakpoints>
@@ -913,8 +915,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Frontalize.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="257">
-          <caret line="914" column="22" selection-start-line="914" selection-start-column="22" selection-end-line="914" selection-end-column="22" />
+        <state relative-caret-position="122">
+          <caret line="126" column="36" selection-start-line="126" selection-start-column="36" selection-end-line="126" selection-end-column="36" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
           </folding>

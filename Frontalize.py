@@ -89,7 +89,9 @@ def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
         frontalFace = fdata[0]
         dgenMap = fdata[1]
         ff_bgr = cv2.cvtColor(frontalFace, cv2.COLOR_BGR2RGB)
-        inpainted_bgr = cv2.cvtColor(dgenMap, cv2.COLOR_BGR2RGB)
+        inpainted_bgr = None
+        if dgenMap is not None and len(dgenMap) > 0:
+            inpainted_bgr = cv2.cvtColor(dgenMap, cv2.COLOR_BGR2RGB)
         return(ff_bgr,inpainted_bgr)
     return (None,None)
 def testFrontalize():
@@ -122,7 +124,8 @@ def testFrontalize():
         frontal_raw,inpainted = runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer)
         if frontal_raw is not None:
             cv2.imshow('raw',frontal_raw)
-            cv2.imshow('inpainted',inpainted)
+            if inpainted is not None:
+                cv2.imshow('inpainted',inpainted)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         t1 = time.time()
@@ -997,9 +1000,9 @@ class Frontalizer:
         return frame
 
 if __name__ == "__main__":
-    imgdir = sys.argv[1]
-    outputDir = sys.argv[2]
-    numcores = int(sys.argv[3])
-    runImageDir(imgdir,outputDir,numcores)
-#testFrontalize()
+    # imgdir = sys.argv[1]
+    # outputDir = sys.argv[2]
+    # numcores = int(sys.argv[3])
+    # runImageDir(imgdir,outputDir,numcores)
+    testFrontalize()
 #runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output')
