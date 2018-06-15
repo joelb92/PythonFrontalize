@@ -49,11 +49,12 @@ def parRunImages(files,detector,predictor,frontalizer,outputDir):
             frontal_raw, inpainted = runFrontalizationOnImage(img_bgr, detector, predictor, frontalizer)
             # cv2.imwrite(os.path.join(outputDir, 'inpaint_' + file), inpainted)
             print('writing ', outputDir,os.path.basename(file))
-            cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
+            if frontal_raw is not None:
+                cv2.imwrite(os.path.join(outputDir,os.path.basename(file)), frontal_raw)
         except:
             pass
 
-def runImageDir(imgDir,outputDir,numcores=1):
+def runImageDir(imgDir,outputDir,numcores=1,dirLevels = 1):
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
     predictor_path = './data/shape_predictor_68_face_landmarks.dat'
@@ -87,7 +88,7 @@ def runImageDir(imgDir,outputDir,numcores=1):
 
 
 def runFrontalizationOnImage(img_bgr,detector,predictor,frontalizer):
-    faceRect, landmarks, img = detectLandmarks(img_bgr, detector, predictor)
+    faceRect, landmarks, img = detectLandmarks(img_bgr, detector, predictor,detscale=1)
     if faceRect is not None:
         # poseFrame = frontalizer.genPoseOutputImage(img, landmarks)
         img_bgr = cv2.rectangle(img_bgr, (faceRect[0], faceRect[1]), (faceRect[2], faceRect[3]), (255, 0, 0), 5)
@@ -440,6 +441,7 @@ class Frontalizer:
                     print("Mapping time: ", t1 - t0)
                 mapped_img = mapData[0]
                 dgenmap = mapData[1]
+                inpainted_img = mapData[2]
                 t0 = time.time()
                 mapped_img = mapped_img[mapped_img.shape[0]-mapped_img.shape[1]:mapped_img.shape[0]]
                 self.modelLandmarks = self.modelLandmarks-[0,50]
@@ -465,7 +467,7 @@ class Frontalizer:
                     print("Best image time: ", t1 - t0)
                 if side == 0 or True:
                     bestImage = frontal_raw
-        return bestImage,dgenmap
+        return bestImage,inpainted_img
 
 
     def bestSymIndex(self,images):
@@ -926,7 +928,7 @@ class Frontalizer:
         #inpainted = mirrorInpaint(final_mapped_img, r)
         inpainted = []
         face_masked = final_mapped_img*(1-r)
-        return (face_masked,inpainted)
+        return (final_mapped_img,face_masked,inpainted)
 
     def face_orientation(self,frame, landmarks):
         size = frame.shape  # (height, width, color_channel)
@@ -1015,4 +1017,4 @@ if __name__ == "__main__":
     numcores = int(sys.argv[3])
     runImageDir(imgdir,outputDir,numcores)
     #testFrontalize()
-#runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output')
+    #runImageDir('/Users/joel/Documents/Projects/Thesis/frontalization_output/flynn','/Users/joel/Documents/Projects/Thesis/frontalization_output/output',5)

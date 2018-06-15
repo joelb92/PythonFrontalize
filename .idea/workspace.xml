@@ -25,8 +25,8 @@
       <file leaf-file-name="Frontalize.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Frontalize.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="272">
-              <caret line="78" column="13" selection-start-line="78" selection-start-column="13" selection-end-line="78" selection-end-column="13" />
+            <state relative-caret-position="381">
+              <caret line="469" column="38" selection-start-line="469" selection-start-column="38" selection-end-line="469" selection-end-column="38" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -193,7 +193,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="python_frontalizer_2" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Frontalize.py" />
-      <option name="PARAMETERS" value="$USER_HOME$/Desktop/MD_Fusion/0f8aeee8d3a16b3a09d7c86a7d20ba90.json -nist -datasetname NC2017_Dev1_Beta4" />
+      <option name="PARAMETERS" value="$PROJECT_DIR$/lfw ./output 1" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
@@ -445,7 +445,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>989</line>
+          <line>991</line>
           <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -465,23 +465,38 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>905</line>
+          <line>907</line>
           <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>901</line>
+          <line>903</line>
           <option name="timeStamp" value="24" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>304</line>
+          <line>305</line>
           <option name="timeStamp" value="29" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/Frontalize.py</url>
-          <line>852</line>
+          <line>854</line>
           <option name="timeStamp" value="39" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/Frontalize.py</url>
+          <line>93</line>
+          <option name="timeStamp" value="40" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/Frontalize.py</url>
+          <line>90</line>
+          <option name="timeStamp" value="43" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/Frontalize.py</url>
+          <line>17</line>
+          <option name="timeStamp" value="44" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-dialog>
@@ -494,7 +509,7 @@
           </properties>
         </breakpoint>
       </default-breakpoints>
-      <option name="time" value="40" />
+      <option name="time" value="45" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -915,8 +930,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Frontalize.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="272">
-          <caret line="78" column="13" selection-start-line="78" selection-start-column="13" selection-end-line="78" selection-end-column="13" />
+        <state relative-caret-position="381">
+          <caret line="469" column="38" selection-start-line="469" selection-start-column="38" selection-end-line="469" selection-end-column="38" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
           </folding>
